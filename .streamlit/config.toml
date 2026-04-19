@@ -1,0 +1,17 @@
+[theme]
+primaryColor = "#1E88E5"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#FAFAFA"
+font = "sans serif"
+
+[server]
+# The default "auto" watcher introspects every imported module to watch its
+# source files. transformers' image_processing_* modules import torchvision at
+# top level, so the watcher's introspection raises ModuleNotFoundError for
+# each one and floods the console with tracebacks. We don't need hot-reload
+# for a local tool — turn the watcher off.
+fileWatcherType = "none"
+
+[browser]
+gatherUsageStats = false

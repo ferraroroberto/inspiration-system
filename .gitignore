@@ -1,0 +1,10 @@
+.venv/
+.env
+index/
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+tmp/
+config.json
+.claude/settings.local.json
+.pytest_cache/

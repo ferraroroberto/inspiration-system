@@ -1,0 +1,11 @@
+{
+  "notion_api_key": "${NOTION_API_TOKEN}",
+  "illustrations_db_id": "YOUR_ILLUSTRATIONS_DB_ID",
+  "visual_types_db_id": "YOUR_VISUAL_TYPES_DB_ID",
+  "concepts_db_id": "YOUR_CONCEPTS_DB_ID",
+  "source_folder": "C:/path/to/your/source/archived",
+  "index_folder": "C:/path/to/your/inspiration-system/index",
+  "embed_model": "BAAI/bge-large-en-v1.5",
+  "samples_dest_folder": "C:/path/to/your/inspiration samples",
+  "samples_xls_output": "C:/path/to/your/inspiration samples/samples_index.xlsx"
+}
