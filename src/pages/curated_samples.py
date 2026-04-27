@@ -99,7 +99,7 @@ def _run_and_render(config: dict, apply: bool) -> None:
                 ["concept_type", "concept", "visual_type", "illustration_title", "missing_source_file"]
             ].rename(columns={"missing_source_file": "missing_png"})
             with st.expander(f"Preview planned rows ({len(preview_df)})", expanded=False):
-                st.dataframe(preview_df, use_container_width=True, hide_index=True)
+                st.dataframe(preview_df, width="stretch", hide_index=True)
 
         if not apply:
             status.update(label="Preview only — nothing written.", state="complete", expanded=False)
