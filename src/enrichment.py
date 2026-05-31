@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""Generate metaphor enrichments for every illustration via ``claude -p``.
+"""Generate metaphor enrichments for every illustration via the Anthropic SDK.
 
 Two entry points:
   - ``enrich_rows(rows, cache_path, ...)`` — importable library call.
   - ``main()`` — argparse CLI. Used by ``python -m src.enrichment``.
 
-For each illustration we ask Claude Code (headless) for a rich metaphor
-structure: visual elements, metaphorical meanings, applicable themes, tone.
-Results are cached one-object-per-line in ``index/enrichments.jsonl`` so the
-job is resumable and incremental: re-running only calls ``claude -p`` for
-rows not already in the cache.
+For each illustration we ask Claude for a rich metaphor structure: visual
+elements, metaphorical meanings, applicable themes, tone. Results are cached
+one-object-per-line in ``index/enrichments.jsonl`` so the job is resumable
+and incremental: re-running only calls the API for rows not already in the
+cache.
+
+LLM calls are routed through the local hub at http://127.0.0.1:8000 using
+the standard Anthropic SDK. The hub proxies requests to Claude Code or local
+models depending on the ``model`` name.
 
 Logging follows the externalrisk convention:
     '%(asctime)s - %(levelname)s - %(message)s'
@@ -21,17 +25,29 @@ import argparse
 import json
 import logging
 import re
-import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
+from anthropic import Anthropic
 from dotenv import load_dotenv
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+_HUB_BASE_URL = "http://127.0.0.1:8000"
+_HUB_MODEL = "claude-haiku-4-5"
+_client: Optional[Anthropic] = None
+
+
+def _get_client() -> Anthropic:
+    global _client
+    if _client is None:
+        _client = Anthropic(api_key="local-dummy", base_url=_HUB_BASE_URL)
+    return _client
+
 
 PROMPT_HEADER = """\
 You are a visual metaphor librarian. For each illustration below, output the
@@ -122,19 +138,15 @@ def _parse_envelope(raw_stdout: str) -> List[Dict[str, Any]]:
 
 
 def _call_claude(prompt: str, timeout: float = 300.0) -> str:
-    """Invoke ``claude -p`` in headless JSON mode. Returns raw stdout."""
-    proc = subprocess.run(
-        ["claude", "-p", prompt, "--output-format", "json"],
-        capture_output=True,
-        text=True,
+    """Call the LLM via the local hub (Anthropic SDK). Returns the assistant text."""
+    client = _get_client()
+    message = client.messages.create(
+        model=_HUB_MODEL,
+        max_tokens=4096,
+        messages=[{"role": "user", "content": prompt}],
         timeout=timeout,
-        check=False,
     )
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"claude -p exited {proc.returncode}: {proc.stderr[:500]}"
-        )
-    return proc.stdout
+    return message.content[0].text
 
 
 def _load_cache(cache_path: Path) -> Dict[str, Dict[str, Any]]:
@@ -173,10 +185,10 @@ def enrich_rows(
     """Return a dict keyed by ``illustration_id`` → enrichment object.
 
     Cached rows are loaded from ``cache_path``; uncached rows are batched
-    and sent to ``claude -p``. The cache file is appended incrementally
-    so interrupted runs can resume.
+    and sent to the LLM via the local hub. The cache file is appended
+    incrementally so interrupted runs can resume.
 
-    ``caller(prompt) -> raw_stdout`` can be injected for testing.
+    ``caller(prompt) -> text`` can be injected for testing.
     """
     caller = caller or _call_claude
     cache = _load_cache(cache_path)
@@ -189,7 +201,7 @@ def enrich_rows(
 
     logger.info(
         f"🧠 Enriching {len(todo)} rows in batches of {batch_size} "
-        f"→ {(len(todo) + batch_size - 1) // batch_size} claude -p calls"
+        f"→ {(len(todo) + batch_size - 1) // batch_size} hub calls"
     )
 
     batches = _split_batches(todo, batch_size)
@@ -270,7 +282,7 @@ def main() -> int:
     )
 
     parser = argparse.ArgumentParser(
-        description="Generate metaphor enrichments via claude -p, cache in jsonl."
+        description="Generate metaphor enrichments via the LLM hub, cache in jsonl."
     )
     parser.add_argument("--config", default="config.json")
     parser.add_argument(
