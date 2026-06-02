@@ -6,11 +6,11 @@ archive and copies the matching .png into a curated 'inspiration samples'
 folder, flat + nested, plus an XLS index.
 
 Usable two ways:
-  - CLI:   python sample_illustrations.py [--dry-run] [--config config.json]
-  - Lib:   from sample_illustrations import plan_samples, apply_samples
+  - CLI:   python -m src.sample_illustrations [--dry-run] [--config config.json]
+  - Lib:   from src.sample_illustrations import plan_samples, apply_samples
 
-Notion access + field extraction comes from notion_client.py (shared with
-build_index.py); only the sample-selection + filesystem layout logic lives
+Notion access + field extraction comes from src/notion_client.py (shared with
+src/build_index.py); only the sample-selection + filesystem layout logic lives
 here.
 """
 

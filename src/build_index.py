@@ -4,7 +4,7 @@
 Two entry points:
   - ``build_index(config, dry_run=False, progress_cb=None)`` — importable.
     Used by the Streamlit "Build" page so we can capture its log stream.
-  - ``main()`` — argparse CLI. Used by ``build.bat``.
+  - ``main()`` — argparse CLI. Used by ``python -m src.build_index``.
 
 Logging follows the externalrisk convention:
     '%(asctime)s - %(levelname)s - %(message)s'
