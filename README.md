@@ -30,7 +30,7 @@ Three linked Streamlit pages, one library of logic:
 |---|---|
 | 🔍 **Search** | Paste text → embed with bge-large query prefix → cosine-rank the 1,024-dim index → dedup by visual type → render top N as cards with thumbnails, breadcrumbs, match bars, ALT text, enrichment fields, and an Open folder button. |
 | 🗂 **Samples** | Rebuild the `inspiration samples/` folder on disk — one PNG per visual type, flat + nested layouts, with an XLS index. Plan (dry-run) or apply. Live log. |
-| 🧠 **Build** | Full rebuild: query Notion → enrich via `claude -p` (cached, incremental) → compose enriched embed text → embed with `BAAI/bge-large-en-v1.5` → persist parquet + npy + meta. Live log + progress bar. |
+| 🧠 **Build** | Full rebuild: query Notion → enrich via Anthropic SDK → local hub at `127.0.0.1:8000`, model `claude-haiku-4-5` (cached, incremental) → compose enriched embed text → embed with `BAAI/bge-large-en-v1.5` → persist parquet + npy + meta. Live log + progress bar. |
 
 ## How it works
 
@@ -40,7 +40,7 @@ Three phases. The first two are offline and incremental; the third is live per-q
 
 *Where:* `src/enrichment.py` · *Trigger:* Build page, or `python -m src.enrichment`
 
-For each illustration, Claude Code in headless mode (`claude -p --output-format json`) is asked to return a rich JSON object:
+For each illustration, the Anthropic SDK routes a request to the local hub at `http://127.0.0.1:8000` (model `claude-haiku-4-5`) to return a rich JSON object:
 
 ```json
 {
@@ -63,18 +63,18 @@ For each illustration, Claude Code in headless mode (`claude -p --output-format 
 
 The prompt is explicit about the goal: "output the underlying metaphor structure, not the literal scene" — with good/bad examples inline. The LLM is instructed to brainstorm 5–10 applicable themes *beyond* the original theme tag; that's the whole point of the pass.
 
-**Batching**: 15 rows per `claude -p` call (~100 calls for 1,500 rows). Smaller than the obvious 20 to leave context headroom for the richer output schema.
+**Batching**: 15 rows per hub call (~100 calls for 1,500 rows). Smaller than the obvious 20 to leave context headroom for the richer output schema.
 
-**Caching**: results appended incrementally to `index/enrichments.jsonl`, one object per line, keyed by `illustration_id`. Re-runs skip anything already cached — adding 50 new Notion rows costs ~4 calls, not the whole 100. If a subprocess fails mid-run, rerunning picks up from the last batch.
+**Caching**: results appended incrementally to `index/enrichments.jsonl`, one object per line, keyed by `illustration_id`. Re-runs skip anything already cached — adding 50 new Notion rows costs ~4 calls, not the whole 100. If a call fails mid-run, rerunning picks up from the last batch.
 
-**Zero marginal cost**: `claude -p` reuses the existing Claude Code auth. No separate API key, no per-call billing.
+**Prerequisite**: the local LLM hub must be running at `127.0.0.1:8000`. Enrichment calls are routed through the hub, which proxies to Claude Code using your existing subscription — no separate API key or per-call billing, but the hub process must be up.
 
 ### Phase 2 — Offline indexing
 
 *Where:* `src/build_index.py` · *Trigger:* Build page, or `python -m src.build_index`
 
 1. Pull the three Notion databases (concepts / visual types / illustrations), join them.
-2. Call `enrich_rows(...)` — reads the cache, calls `claude -p` only for uncached rows.
+2. Call `enrich_rows(...)` — reads the cache, calls the hub only for uncached rows.
 3. Compose the embed text, putting enriched fields *first*:
    ```
    Could represent: optimal stress produces transformation; pressure as creative force.
@@ -112,7 +112,7 @@ inspiration-system/
 │   ├── ui_utils.py           StreamlitLogHandler + open_in_explorer
 │   ├── notion_client.py      Notion pull + field extraction
 │   ├── build_index.py        Notion → join → enrich → embed → persist (lib + CLI)
-│   ├── enrichment.py         Metaphor enrichment via `claude -p` (lib + CLI)
+│   ├── enrichment.py         Metaphor enrichment via local hub (lib + CLI)
 │   ├── sample_illustrations.py  Plan + apply the curated-samples folder (lib + CLI)
 │   └── pages/
 │       ├── search.py
@@ -162,6 +162,8 @@ Then copy `.env.example` → `.env` and paste your Notion integration token:
 NOTION_API_TOKEN=secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
+**Enrichment prerequisite:** the **Build** page runs metaphor enrichment through the local LLM hub at `127.0.0.1:8000`. The hub must be running before starting a full build — see the [`claude-local-calls`](../claude-local-calls) repo. (`--skip-enrichment` bypasses this when you only need to re-embed an already-enriched index.)
+
 ## Usage
 
 Launch the app:
@@ -172,7 +174,7 @@ run_app.bat
 
 Opens `http://localhost:8501`. From the sidebar:
 
-- **Build** — start here the first time. The **Dry run** tab verifies the Notion connection without writing anything; **Full build** pulls Notion, runs metaphor enrichment via `claude -p` (cached — only new rows incur calls), and embeds with `BAAI/bge-large-en-v1.5` (first run downloads ~1.3GB).
+- **Build** — start here the first time. The **Dry run** tab verifies the Notion connection without writing anything; **Full build** pulls Notion, runs metaphor enrichment via the local hub at `127.0.0.1:8000` (cached — only new rows incur hub calls), and embeds with `BAAI/bge-large-en-v1.5` (first run downloads ~1.3GB). **Requires the local hub to be running.**
 - **Search** — paste text, hit the button, browse results.
 - **Samples** — **Plan** to preview what would be written, then **Rebuild** to wipe the destination folder and write the flat + nested PNGs plus `samples_index.xlsx`.
 
@@ -181,7 +183,7 @@ Or use the CLIs directly:
 ```
 python -m src.build_index                          Full index build (enrichment + embed)
 python -m src.build_index --dry-run                Planning only
-python -m src.build_index --skip-enrichment        Skip claude -p pass (dev iteration)
+python -m src.build_index --skip-enrichment        Skip enrichment hub calls (dev iteration)
 
 python -m src.enrichment                           Run only the enrichment pass, cache to jsonl
 python -m src.enrichment --sample 20               Prototype on the first 20 Notion rows
@@ -210,17 +212,17 @@ pytest
 The suite covers:
 
 - `src.build_index.build_embed_text` — composition edge cases (title only, ALT only, empty inputs, trailing-dot stripping, enrichment prepended, enrichment=None back-compat).
-- `src.enrichment._split_batches` / `_parse_envelope` / `_load_cache` — batch splitting, `claude -p` JSON envelope unwrapping (raw array, plain text, fenced JSON, is_error), cache round-trip and malformed-line tolerance.
+- `src.enrichment._split_batches` / `_parse_envelope` / `_load_cache` — batch splitting, LLM response parsing (raw array, plain text, fenced JSON, is_error), cache round-trip and malformed-line tolerance.
 - `src.enrichment.enrich_rows` — end-to-end with an injected caller: full run writes cache, resume skips cached rows, all-cached makes zero calls.
 - `src.sample_illustrations.sanitize` / `extract_topic` — Windows-illegal-char removal, empty-fallback, visualtype-prefix stripping.
 - `src.ui_utils.StreamlitLogHandler` — formatting, tail-to-max-lines, attach/detach round-trip with a fake container.
 
-36 tests, ~1s. No Notion, no `claude -p`, no model downloads.
+36 tests, ~1s. No Notion, no hub calls, no model downloads.
 
 ## Notes
 
 - **Two diversity mechanisms, one at each end.** Enrichment gives the embedding space a richer *metaphor* axis so lateral matches appear at all; the visual-type dedup in the search walk prevents the final top-N from collapsing into ten near-identical renderings of the same idea. You need both: enrichment without dedup surfaces lateral metaphors but still lets barcharts dominate; dedup without enrichment gives you diverse renderings of the *obvious* interpretation only.
-- **Enrichment is resumable and idempotent.** `index/enrichments.jsonl` is append-only, one object per line, keyed by `illustration_id`. `enrich_rows(...)` loads the cache, filters to uncached, and appends new entries after each batch. Interrupt at any point, rerun, it picks up where it left off. Adding 50 new Notion rows calls `claude -p` ~4 times, not ~100.
+- **Enrichment is resumable and idempotent.** `index/enrichments.jsonl` is append-only, one object per line, keyed by `illustration_id`. `enrich_rows(...)` loads the cache, filters to uncached, and appends new entries after each batch. Interrupt at any point, rerun, it picks up where it left off. Adding 50 new Notion rows makes ~4 hub calls, not ~100.
 - **bge query prefix is conditional.** `src/pages/search.py` prefixes the query with `"Represent this sentence for searching relevant passages: "` only when the indexed model name contains `bge`. Swap to a different model via `config.json` and the prefix is skipped automatically.
 - **No torchvision required.** We use sentence-transformers for text embeddings only. Streamlit's default file watcher used to introspect every `transformers.models.*.image_processing_*` module at startup, which tried to `import torchvision` and flooded the console with tracebacks. `.streamlit/config.toml` sets `fileWatcherType = "none"` to skip that introspection.
 - **Missing PNGs aren't fatal.** Each indexed row has a `missing_png` flag; the Search page filters them out at ranking time so broken results never reach the UI. The sample rebuild logs how many planned samples have no matching `.png` in the source folder (rows are still written to the XLS index for debugging).
@@ -229,7 +231,7 @@ The suite covers:
 
 Deferred — ship enrichment first, add only if quality still gaps:
 
-- **LLM rerank layer.** After cosine top-40, one `claude -p` call reranks by metaphor aptness and diversifies by visual-metaphor family (bridges, speech bubbles, light/dark, puzzle pieces, …). Recipe in `tmp/plan.md` §4. Trades ~1–2s latency for better diversity beyond the current visual-type dedup.
+- **LLM rerank layer.** After cosine top-40, one hub call (via `127.0.0.1:8000`) reranks by metaphor aptness and diversifies by visual-metaphor family (bridges, speech bubbles, light/dark, puzzle pieces, …). Recipe in `tmp/plan.md` §4. Trades ~1–2s latency for better diversity beyond the current visual-type dedup.
 - **Query expansion.** Before retrieval, ask Claude to expand a terse query into 3–5 metaphorical framings, embed each, union top candidates. Improves recall for one-liners like "obstacle".
 - **Multimodal enrichment.** Pass the PNG alongside text when calling the LLM, so metaphor extraction can see the image, not just read its ALT.
 - **Image-based embeddings** (Gemini multimodal) for a pure visual-similarity lane alongside the text lane.
