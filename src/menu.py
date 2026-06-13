@@ -69,15 +69,16 @@ def render_home() -> None:
         runs live per query.
 
         **1 · Metaphor enrichment** — `src/enrichment.py`
-        For each illustration, **Claude Code in headless mode**
-        (`claude -p --output-format json`) returns a structured JSON object with
-        *visual elements*, *metaphorical meanings*, *applicable themes*, *tone*,
-        and *abstraction level*. The prompt asks for the underlying metaphor
-        structure, not the literal scene — so the embedding later keys off
-        *what an illustration could represent*, not just what it shows.
+        For each illustration, the **Anthropic SDK** routes a request to the
+        local LLM hub at `http://127.0.0.1:8000` (model `claude-haiku-4-5`)
+        and returns a structured JSON object with *visual elements*,
+        *metaphorical meanings*, *applicable themes*, *tone*, and *abstraction
+        level*. The prompt asks for the underlying metaphor structure, not the
+        literal scene — so the embedding later keys off *what an illustration
+        could represent*, not just what it shows.
         Batched 15 rows per call, cached in `index/enrichments.jsonl`,
-        resumable and idempotent. Uses the existing Claude Code auth — no
-        separate API key, no per-call billing.
+        resumable and idempotent. Requires the local hub to be running
+        (`127.0.0.1:8000`) — no separate API key or per-call billing.
 
         **2 · Offline indexing** — `src/build_index.py`
         Pulls the three **Notion** databases (concepts / visual types /
@@ -122,7 +123,7 @@ def render_home() -> None:
         **Two diversity mechanisms, one at each end.** Enrichment opens up
         *metaphor* diversity in the embedding space; the visual-type dedup in
         the search walk enforces *rendering* diversity in the final top-N.
-        Once built, the index is fully self-contained — Notion and `claude -p`
+        Once built, the index is fully self-contained — Notion and the LLM hub
         aren't touched again until you rebuild.
         """
     )

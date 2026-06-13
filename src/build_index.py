@@ -119,9 +119,9 @@ def build_index(
 
     ``progress_cb(done, total)`` is called after each embedding batch.
 
-    ``skip_enrichment=True`` bypasses the ``claude -p`` enrichment pass and
+    ``skip_enrichment=True`` bypasses the hub/LLM enrichment pass and
     falls back to the pre-enrichment ``embed_text`` composition. Handy for
-    fast dev iterations or when Claude Code is unavailable.
+    fast dev iterations or when the local hub is unavailable.
     """
     source_folder = Path(config["source_folder"])
     index_folder = Path(config["index_folder"])
@@ -277,7 +277,7 @@ def main() -> int:
     parser.add_argument(
         "--skip-enrichment",
         action="store_true",
-        help="Don't call claude -p for metaphor enrichment; use pre-enrichment embed_text.",
+        help="Don't call the LLM hub for metaphor enrichment; use pre-enrichment embed_text.",
     )
     args = parser.parse_args()
 
