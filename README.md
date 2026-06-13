@@ -152,8 +152,7 @@ the terminal and in the in-app viewer.
 
 ```
 py -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
+& .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 Then copy `.env.example` → `.env` and paste your Notion integration token:
@@ -205,8 +204,7 @@ and rerun the index build.
 ## Tests
 
 ```
-.venv\Scripts\activate
-pytest
+& .\.venv\Scripts\python.exe -m pytest
 ```
 
 The suite covers:
@@ -226,16 +224,6 @@ The suite covers:
 - **bge query prefix is conditional.** `src/pages/search.py` prefixes the query with `"Represent this sentence for searching relevant passages: "` only when the indexed model name contains `bge`. Swap to a different model via `config.json` and the prefix is skipped automatically.
 - **No torchvision required.** We use sentence-transformers for text embeddings only. Streamlit's default file watcher used to introspect every `transformers.models.*.image_processing_*` module at startup, which tried to `import torchvision` and flooded the console with tracebacks. `.streamlit/config.toml` sets `fileWatcherType = "none"` to skip that introspection.
 - **Missing PNGs aren't fatal.** Each indexed row has a `missing_png` flag; the Search page filters them out at ranking time so broken results never reach the UI. The sample rebuild logs how many planned samples have no matching `.png` in the source folder (rows are still written to the XLS index for debugging).
-
-## Backlog
-
-Deferred — ship enrichment first, add only if quality still gaps:
-
-- **LLM rerank layer.** After cosine top-40, one hub call (via `127.0.0.1:8000`) reranks by metaphor aptness and diversifies by visual-metaphor family (bridges, speech bubbles, light/dark, puzzle pieces, …). Recipe in `tmp/plan.md` §4. Trades ~1–2s latency for better diversity beyond the current visual-type dedup.
-- **Query expansion.** Before retrieval, ask Claude to expand a terse query into 3–5 metaphorical framings, embed each, union top candidates. Improves recall for one-liners like "obstacle".
-- **Multimodal enrichment.** Pass the PNG alongside text when calling the LLM, so metaphor extraction can see the image, not just read its ALT.
-- **Image-based embeddings** (Gemini multimodal) for a pure visual-similarity lane alongside the text lane.
-- **Streamlit diagnostics tab.** Inspect any illustration's enriched JSON; view the top-40 candidate list pre-rerank vs post-rerank when tuning prompts.
 
 ## License
 
