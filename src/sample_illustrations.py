@@ -29,13 +29,8 @@ import pandas as pd
 from dotenv import load_dotenv
 
 from src.notion_client import (
-    build_concepts_map,
-    build_headers,
-    build_illustrations_map,
-    build_visual_types_map,
+    fetch_notion_maps,
     load_config,
-    query_database,
-    resolve_token,
 )
 
 load_dotenv()
@@ -85,16 +80,11 @@ def plan_samples(config: Dict[str, Any]) -> SamplePlan:
 
     Pure planning — no filesystem writes, no copies.
     """
-    token = resolve_token(config)
-    headers = build_headers(token)
-
     source_folder = Path(config["source_folder"])
     dest_folder = Path(config["samples_dest_folder"])
 
     logger.info("🔎 Querying Notion…")
-    concepts = build_concepts_map(query_database(config["concepts_db_id"], headers))
-    visual_types = build_visual_types_map(query_database(config["visual_types_db_id"], headers))
-    illustrations = build_illustrations_map(query_database(config["illustrations_db_id"], headers))
+    concepts, visual_types, illustrations = fetch_notion_maps(config)
 
     rows: List[Dict[str, Any]] = []
     skipped_no_illustrations = 0
