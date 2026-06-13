@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
@@ -131,3 +131,22 @@ def build_illustrations_map(pages: List[Dict[str, Any]]) -> Dict[str, Dict[str, 
             "created": p.get("created_time"),
         }
     return out
+
+
+def fetch_notion_maps(
+    config: Dict[str, Any],
+) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]], Dict[str, Dict[str, Any]]]:
+    """Resolve the Notion token, build headers, and query the three databases.
+
+    Returns ``(concepts_map, visual_types_map, illustrations_map)`` in that
+    order — the canonical triple used by ``build_index``, ``enrichment``, and
+    ``sample_illustrations``.  Callers that previously duplicated the
+    ``resolve_token + build_headers + three-query`` sequence should call this
+    instead.
+    """
+    token = resolve_token(config)
+    headers = build_headers(token)
+    concepts = build_concepts_map(query_database(config["concepts_db_id"], headers))
+    visual_types = build_visual_types_map(query_database(config["visual_types_db_id"], headers))
+    illustrations = build_illustrations_map(query_database(config["illustrations_db_id"], headers))
+    return concepts, visual_types, illustrations

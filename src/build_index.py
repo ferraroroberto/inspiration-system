@@ -28,13 +28,8 @@ import pandas as pd
 from dotenv import load_dotenv
 
 from src.notion_client import (
-    build_concepts_map,
-    build_headers,
-    build_illustrations_map,
-    build_visual_types_map,
+    fetch_notion_maps,
     load_config,
-    query_database,
-    resolve_token,
 )
 
 load_dotenv()
@@ -128,9 +123,6 @@ def build_index(
     falls back to the pre-enrichment ``embed_text`` composition. Handy for
     fast dev iterations or when Claude Code is unavailable.
     """
-    token = resolve_token(config)
-    headers = build_headers(token)
-
     source_folder = Path(config["source_folder"])
     index_folder = Path(config["index_folder"])
     model_name = config.get("embed_model", "sentence-transformers/all-MiniLM-L6-v2")
@@ -139,9 +131,7 @@ def build_index(
         logger.warning(f"⚠️ Source PNG folder not found: {source_folder} (rows will be flagged missing_png)")
 
     logger.info("🔎 Querying Notion…")
-    concepts = build_concepts_map(query_database(config["concepts_db_id"], headers))
-    visual_types = build_visual_types_map(query_database(config["visual_types_db_id"], headers))
-    illustrations = build_illustrations_map(query_database(config["illustrations_db_id"], headers))
+    concepts, visual_types, illustrations = fetch_notion_maps(config)
 
     rows = assemble_rows(illustrations, visual_types, concepts, source_folder)
     missing_png_count = sum(1 for r in rows if r["missing_png"])

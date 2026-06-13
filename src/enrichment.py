@@ -249,26 +249,14 @@ def _rows_from_notion(config_path: str) -> List[Dict[str, Any]]:
     The enrichment CLI is standalone so the user can run it live from
     a terminal without first going through build_index.
     """
-    from src.notion_client import (
-        build_concepts_map,
-        build_headers,
-        build_illustrations_map,
-        build_visual_types_map,
-        load_config,
-        query_database,
-        resolve_token,
-    )
+    from src.notion_client import fetch_notion_maps, load_config
     from src.build_index import assemble_rows
 
     config = load_config(config_path)
-    token = resolve_token(config)
-    headers = build_headers(token)
     source_folder = Path(config["source_folder"])
 
     logger.info("🔎 Querying Notion for rows to enrich…")
-    concepts = build_concepts_map(query_database(config["concepts_db_id"], headers))
-    visual_types = build_visual_types_map(query_database(config["visual_types_db_id"], headers))
-    illustrations = build_illustrations_map(query_database(config["illustrations_db_id"], headers))
+    concepts, visual_types, illustrations = fetch_notion_maps(config)
     rows = assemble_rows(illustrations, visual_types, concepts, source_folder)
     logger.info(f"📊 Pulled {len(rows)} rows from Notion")
     return rows
