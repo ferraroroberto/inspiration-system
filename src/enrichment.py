@@ -104,18 +104,19 @@ _ARRAY_RE = re.compile(r"(\[.*\])", re.DOTALL)
 
 
 def _parse_envelope(raw_stdout: str) -> List[Dict[str, Any]]:
-    """Unwrap the ``claude -p --output-format json`` envelope and return the
-    inner JSON array of enrichment objects.
+    """Parse LLM output and return the inner JSON array of enrichment objects.
 
-    The envelope shape looks like::
+    Accepts either:
+    - A raw or fenced JSON array (the hub path — ``message.content[0].text``
+      from the Anthropic SDK, passed by ``_call_claude``).
+    - A legacy ``claude -p --output-format json`` result envelope::
         {"type": "result", "subtype": "success", "result": "...", ...}
-
-    The ``result`` field is the assistant's raw text, which may or may not
-    contain a fenced ```json block.
+      Retained as defensive parsing for backwards compatibility; the live
+      caller no longer produces this shape.
     """
     raw_stdout = raw_stdout.strip()
     if not raw_stdout:
-        raise ValueError("empty stdout from claude -p")
+        raise ValueError("empty response from LLM")
 
     try:
         envelope = json.loads(raw_stdout)

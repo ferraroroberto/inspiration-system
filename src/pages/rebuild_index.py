@@ -85,7 +85,7 @@ def render() -> None:
     with tab_full:
         st.markdown(
             "Full build: query Notion, run metaphor enrichment (cached — "
-            "only new rows incur `claude -p` calls), embed ~1,500 rows, "
+            "only new rows incur hub/LLM calls), embed ~1,500 rows, "
             "write `illustrations.parquet`, `embeddings.npy`, and "
             "`index_meta.json`. Takes **30–90 seconds** on CPU after "
             "enrichment (first run also downloads the model)."

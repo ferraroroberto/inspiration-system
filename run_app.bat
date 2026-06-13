@@ -4,7 +4,7 @@ REM  Inspiration Illustration Finder
 REM  ------------------------------------------------
 REM  Streamlit app: paste an idea, get 10 ranked illustration
 REM  suggestions from the Notion archive, one per visual type.
-REM  Uses metaphor enrichment (claude -p) + bge-large embeddings.
+REM  Uses metaphor enrichment via the local LLM hub + bge-large embeddings.
 REM ==========================================================
 title Inspiration Illustration Finder - app
 cd /d "%~dp0"
