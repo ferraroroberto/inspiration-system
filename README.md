@@ -161,6 +161,19 @@ Then copy `.env.example` → `.env` and paste your Notion integration token:
 NOTION_API_TOKEN=secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
+Copy `config.example.json` → `config.json` and fill in your Notion DB IDs and local folder paths:
+
+```
+cp config.example.json config.json
+# then open config.json and set:
+#   illustrations_db_id, visual_types_db_id, concepts_db_id  — from your Notion DB URLs
+#   source_folder       — absolute path to your local PNG archive
+#   index_folder        — where the built index files will live
+#   samples_dest_folder / samples_xls_output  — destination for the Samples page
+```
+
+The app will fail with "Missing config.json" on first launch if this step is skipped.
+
 **Enrichment prerequisite:** the **Build** page runs metaphor enrichment through the local LLM hub at `127.0.0.1:8000`. The hub must be running before starting a full build — see the [`claude-local-calls`](../claude-local-calls) repo. (`--skip-enrichment` bypasses this when you only need to re-embed an already-enriched index.)
 
 ## Usage
