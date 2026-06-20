@@ -61,70 +61,24 @@ def render_home() -> None:
             st.write(page["description"])
 
     st.markdown("---")
-    st.subheader("Tech stack & how it works")
+    st.subheader("How it works")
 
     st.markdown(
         """
-        Three phases. The first two run offline and incrementally; the third
-        runs live per query.
+        Three offline phases feed one live search:
 
-        **1 · Metaphor enrichment** — `src/enrichment.py`
-        For each illustration, the **Anthropic SDK** routes a request to the
-        local LLM hub at `http://127.0.0.1:8000` (model `claude-haiku-4-5`)
-        and returns a structured JSON object with *visual elements*,
-        *metaphorical meanings*, *applicable themes*, *tone*, and *abstraction
-        level*. The prompt asks for the underlying metaphor structure, not the
-        literal scene — so the embedding later keys off *what an illustration
-        could represent*, not just what it shows.
-        Batched 15 rows per call, cached in `index/enrichments.jsonl`,
-        resumable and idempotent. Requires the local hub to be running
-        (`127.0.0.1:8000`) — no separate API key or per-call billing.
+        1. **Metaphor enrichment** (`src/enrichment.py`) — an LLM extracts each
+           illustration's underlying metaphor structure (meanings, themes, tone)
+           and caches it in `index/enrichments.jsonl`.
+        2. **Offline indexing** (`src/build_index.py`) — joins Notion databases,
+           composes enriched embed text, embeds with `BAAI/bge-large-en-v1.5`,
+           and persists the matrix + metadata to `index/`.
+        3. **Interactive search** (`src/pages/search.py`) — embeds your query,
+           dot-products against the stored matrix, and deduplicates results by
+           visual type so the top 10 spans distinct renderings.
 
-        **2 · Offline indexing** — `src/build_index.py`
-        Pulls the three **Notion** databases (concepts / visual types /
-        illustrations) via the Notion API, joins them, runs enrichment for
-        any uncached rows, composes the embed text with enriched fields
-        *first* (early tokens carry more weight), and embeds with
-        **`BAAI/bge-large-en-v1.5`** (sentence-transformers, 1024-dim unit
-        vectors). Persists three files to `index/`:
-        `illustrations.parquet` (metadata + enriched columns),
-        `embeddings.npy` (float32 matrix, ~6 MB for 1.5k rows), and
-        `index_meta.json` (model, dim, count, built_at).
-
-        **3 · Interactive search** — `src/pages/search.py`
-        Prefixes the query with bge's retrieval instruction (query-side only),
-        embeds it (sub-100ms on CPU), dot-products against the stored matrix
-        for cosine similarity (sub-ms over 1.5k rows), then walks the ranked
-        list keeping only the highest-scoring illustration per *visual type*
-        so the top 10 is diverse by rendering, not ten near-identical mountains.
-
-        **Samples** — `src/sample_illustrations.py`
-        A side utility that materialises a browsable "inspiration samples"
-        folder on disk: one PNG per *visual type* (most recently created
-        wins), laid out both **flat** (all PNGs in one folder) and **nested**
-        (grouped by concept / visual type), plus an XLS index
-        (`samples_index.xlsx`) listing every selected row. Runs in two
-        modes — **Plan** (dry-run, logs what would be written without
-        touching disk) and **Rebuild** (wipes the destination and writes
-        the new layout). Shares Notion access + field extraction with
-        `build_index.py` via `src/notion_client.py`; only the
-        sample-selection + filesystem-layout logic is specific to this
-        tool. Missing PNGs are logged but don't abort — rows are still
-        written to the XLS index for debugging.
-
-        **UI layer** — **Streamlit** with explicit `st.navigation` + `st.Page`
-        registration (pages live under `src/pages/`, registered in
-        `src/menu.py`). Long-running jobs stream into the UI via a custom
-        `StreamlitLogHandler` (stdlib `logging.Handler` that rewrites an
-        `st.empty()` container on each record). Dark theme in
-        `.streamlit/config.toml`; light mode is a runtime CSS overlay from
-        `app/styles/light.css`, toggled in the sidebar.
-
-        **Two diversity mechanisms, one at each end.** Enrichment opens up
-        *metaphor* diversity in the embedding space; the visual-type dedup in
-        the search walk enforces *rendering* diversity in the final top-N.
-        Once built, the index is fully self-contained — Notion and the LLM hub
-        aren't touched again until you rebuild.
+        See **README.md** for the full architecture, batching/caching details,
+        and CLI reference.
         """
     )
 
