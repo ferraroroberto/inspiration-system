@@ -28,7 +28,7 @@ Three linked Streamlit pages, one library of logic:
 
 | Page | What it does |
 |---|---|
-| 🔍 **Search** | Paste text → embed with bge-large query prefix → cosine-rank the 1,024-dim index → dedup by visual type → render top N as cards with thumbnails, breadcrumbs, match bars, ALT text, enrichment fields, and an Open folder button. |
+| 🔍 **Search** | Paste text → embed with bge-large query prefix → cosine-rank the 1,024-dim index → dedup by visual type → render top N as cards with thumbnails, breadcrumbs, match bars, ALT text, and an Open folder button. |
 | 🗂 **Samples** | Rebuild the `inspiration samples/` folder on disk — one PNG per visual type, flat + nested layouts, with an XLS index. Plan (dry-run) or apply. Live log. |
 | 🧠 **Build** | Full rebuild: query Notion → enrich via Anthropic SDK → local hub at `127.0.0.1:8000`, model `claude-haiku-4-5` (cached, incremental) → compose enriched embed text → embed with `BAAI/bge-large-en-v1.5` → persist parquet + npy + meta. Live log + progress bar. |
 
@@ -174,7 +174,7 @@ cp config.example.json config.json
 
 The app will fail with "Missing config.json" on first launch if this step is skipped.
 
-**Enrichment prerequisite:** the **Build** page runs metaphor enrichment through the local LLM hub at `127.0.0.1:8000`. The hub must be running before starting a full build — see the [`claude-local-calls`](../claude-local-calls) repo. (`--skip-enrichment` bypasses this when you only need to re-embed an already-enriched index.)
+**Enrichment prerequisite:** the **Build** page runs metaphor enrichment through the local LLM hub at `127.0.0.1:8000`. The hub must be running before starting a full build — see the [`local-llm-hub`](../local-llm-hub) repo. (`--skip-enrichment` bypasses this when you only need to re-embed an already-enriched index.)
 
 ## Usage
 
