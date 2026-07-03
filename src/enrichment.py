@@ -38,7 +38,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 _HUB_BASE_URL = "http://127.0.0.1:8000"
-_HUB_MODEL = "claude_haiku"
+_HUB_MODEL = "claude-haiku-4-5"
 _client: Optional[Anthropic] = None
 
 
