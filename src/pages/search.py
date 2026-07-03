@@ -123,12 +123,13 @@ def render() -> None:
         "Paste an idea, quote, or paragraph",
         height=200,
         placeholder="e.g. 'Rising above obstacles to reach new heights' — or a full article paragraph.",
+        key="search_query_text",
     )
     c1, c2 = st.columns([1, 3])
     with c1:
-        k = st.slider("Number of suggestions", 5, 20, 10)
+        k = st.slider("Number of suggestions", 5, 20, 10, key="search_topk")
     with c2:
-        go = st.button("Find illustrations", type="primary")
+        go = st.button("Find illustrations", type="primary", key="search_go")
 
     if not go:
         return
