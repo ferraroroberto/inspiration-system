@@ -186,7 +186,7 @@ run_app.bat
 
 Opens `http://localhost:8501`. From the sidebar:
 
-- **Build** — start here the first time. The **Dry run** tab verifies the Notion connection without writing anything; **Full build** pulls Notion, runs metaphor enrichment via the local hub at `127.0.0.1:8000` (cached — only new rows incur hub calls), and embeds with `BAAI/bge-large-en-v1.5` (first run downloads ~1.3GB). **Requires the local hub to be running.**
+- **Build** — start here the first time. The **Dry run** tab verifies the Notion connection without writing anything; **Full build** pulls Notion, runs metaphor enrichment via the local hub at `127.0.0.1:8000` (model `claude-haiku-4-5`, cached — only new rows incur hub calls), and embeds with `BAAI/bge-large-en-v1.5` (first run downloads ~1.3GB). **Requires the local hub to be running.**
 - **Search** — paste text, hit the button, browse results.
 - **Samples** — **Plan** to preview what would be written, then **Rebuild** to wipe the destination folder and write the flat + nested PNGs plus `samples_index.xlsx`.
 
