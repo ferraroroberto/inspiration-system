@@ -223,12 +223,12 @@ and rerun the index build.
 The suite covers:
 
 - `src.build_index.build_embed_text` — composition edge cases (title only, ALT only, empty inputs, trailing-dot stripping, enrichment prepended, enrichment=None back-compat).
-- `src.enrichment._split_batches` / `_parse_envelope` / `_load_cache` — batch splitting, LLM response parsing (raw array, plain text, fenced JSON, is_error), cache round-trip and malformed-line tolerance.
+- `src.enrichment._split_batches` / `_parse_envelope` / `_load_cache` — batch splitting, LLM response parsing (raw array, fenced JSON), cache round-trip and malformed-line tolerance.
 - `src.enrichment.enrich_rows` — end-to-end with an injected caller: full run writes cache, resume skips cached rows, all-cached makes zero calls.
 - `src.sample_illustrations.sanitize` / `extract_topic` — Windows-illegal-char removal, empty-fallback, visualtype-prefix stripping.
 - `src.ui_utils.StreamlitLogHandler` — formatting, tail-to-max-lines, attach/detach round-trip with a fake container.
 
-36 tests, ~1s. No Notion, no hub calls, no model downloads.
+34 tests, ~1s. No Notion, no hub calls, no model downloads.
 
 ## Notes
 

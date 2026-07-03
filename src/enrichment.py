@@ -106,36 +106,28 @@ _ARRAY_RE = re.compile(r"(\[.*\])", re.DOTALL)
 def _parse_envelope(raw_stdout: str) -> List[Dict[str, Any]]:
     """Parse LLM output and return the inner JSON array of enrichment objects.
 
-    Accepts either:
-    - A raw or fenced JSON array (the hub path — ``message.content[0].text``
-      from the Anthropic SDK, passed by ``_call_claude``).
-    - A legacy ``claude -p --output-format json`` result envelope::
-        {"type": "result", "subtype": "success", "result": "...", ...}
-      Retained as defensive parsing for backwards compatibility; the live
-      caller no longer produces this shape.
+    Accepts a raw or fenced JSON array — ``message.content[0].text`` from the
+    Anthropic SDK, as returned by ``_call_claude``.
     """
     raw_stdout = raw_stdout.strip()
     if not raw_stdout:
         raise ValueError("empty response from LLM")
 
     try:
-        envelope = json.loads(raw_stdout)
+        parsed = json.loads(raw_stdout)
     except json.JSONDecodeError:
-        text = raw_stdout
+        pass
     else:
-        if isinstance(envelope, list):
-            return envelope
-        text = envelope.get("result") or envelope.get("response") or ""
-        if envelope.get("is_error"):
-            raise RuntimeError(f"claude -p returned is_error=true: {text[:200]}")
+        if isinstance(parsed, list):
+            return parsed
 
-    m = _FENCE_RE.search(text)
+    m = _FENCE_RE.search(raw_stdout)
     if m:
         return json.loads(m.group(1))
-    m = _ARRAY_RE.search(text)
+    m = _ARRAY_RE.search(raw_stdout)
     if m:
         return json.loads(m.group(1))
-    raise ValueError(f"no JSON array found in assistant text: {text[:200]!r}")
+    raise ValueError(f"no JSON array found in assistant text: {raw_stdout[:200]!r}")
 
 
 def _call_claude(prompt: str, timeout: float = 300.0) -> str:
