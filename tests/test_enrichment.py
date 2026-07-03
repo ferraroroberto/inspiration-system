@@ -37,27 +37,9 @@ class TestParseEnvelope:
         raw = '[{"id": "a", "tone": "hopeful"}]'
         assert _parse_envelope(raw) == [{"id": "a", "tone": "hopeful"}]
 
-    def test_envelope_with_plain_text_result(self):
-        envelope = {
-            "type": "result",
-            "subtype": "success",
-            "result": '[{"id": "a"}, {"id": "b"}]',
-            "is_error": False,
-        }
-        assert _parse_envelope(json.dumps(envelope)) == [{"id": "a"}, {"id": "b"}]
-
-    def test_envelope_with_fenced_json(self):
-        envelope = {
-            "type": "result",
-            "result": 'Sure, here you go:\n```json\n[{"id": "a"}]\n```\nHope that helps.',
-            "is_error": False,
-        }
-        assert _parse_envelope(json.dumps(envelope)) == [{"id": "a"}]
-
-    def test_envelope_is_error_raises(self):
-        envelope = {"type": "result", "result": "boom", "is_error": True}
-        with pytest.raises(RuntimeError):
-            _parse_envelope(json.dumps(envelope))
+    def test_fenced_json(self):
+        text = 'Sure, here you go:\n```json\n[{"id": "a"}]\n```\nHope that helps.'
+        assert _parse_envelope(text) == [{"id": "a"}]
 
     def test_empty_raises(self):
         with pytest.raises(ValueError):
@@ -136,15 +118,7 @@ class TestEnrichRowsResume:
         ]
         cache_path = tmp_path / "e.jsonl"
         responses = [
-            json.dumps(
-                {
-                    "type": "result",
-                    "result": json.dumps(
-                        [{"id": "a", "tone": "hopeful"}, {"id": "b", "tone": "tense"}]
-                    ),
-                    "is_error": False,
-                }
-            )
+            json.dumps([{"id": "a", "tone": "hopeful"}, {"id": "b", "tone": "tense"}])
         ]
         caller = self._make_caller(responses)
 
@@ -161,15 +135,7 @@ class TestEnrichRowsResume:
         cache_path = tmp_path / "e.jsonl"
         cache_path.write_text(json.dumps({"id": "a", "tone": "hopeful"}) + "\n", encoding="utf-8")
 
-        responses = [
-            json.dumps(
-                {
-                    "type": "result",
-                    "result": json.dumps([{"id": "b", "tone": "tense"}]),
-                    "is_error": False,
-                }
-            )
-        ]
+        responses = [json.dumps([{"id": "b", "tone": "tense"}])]
         caller = self._make_caller(responses)
 
         result = enrich_rows(rows, cache_path, batch_size=10, caller=caller)
