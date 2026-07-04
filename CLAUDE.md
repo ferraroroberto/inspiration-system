@@ -17,3 +17,7 @@ Canonical instructions for AI coding agents working in this repository. Claude C
 ## This repository
 Streamlit app that ranks illustration suggestions from a Notion archive across distinct visual-metaphor families for a given prompt.
 See `README.md` for setup, layout, and usage.
+
+## Internal architecture
+
+[`docs/architecture.mmd`](docs/architecture.mmd) is a hand-authored Mermaid diagram of this repo's own internal structure (the Streamlit entry point, pages, `src/` logic modules, `index/` artifacts, and external dependencies — Notion, the local LLM hub, bge) — the per-repo counterpart to the fleet-wide diagram `/system-map` generates into `global-CLAUDE.md`. Update it in the same PR as any material structural change (a new page, a relocated module, a new external dependency). It is not auto-generated and not covered by the pytest suite.
