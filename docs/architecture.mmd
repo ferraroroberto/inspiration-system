@@ -1,0 +1,77 @@
+%% docs/architecture.mmd — inspiration-system's own internal structure.
+%% Hand-authored, not generated — the per-repo companion to fleet-config's
+%% mechanically-aggregated fleet-wide map (see fleet-config#256). Update this
+%% diagram in the same PR as any material structural change (a new page, a
+%% relocated module, a new external dependency) — same anti-staleness
+%% contract as this repo's own `.fleet.toml` `description` field.
+
+flowchart TB
+  subgraph external["External dependencies"]
+    NOTION[("Notion API\n3 databases: illustrations, visual types, concepts")]
+    HUB[("Local LLM hub\n127.0.0.1:8000 · claude-haiku-4-5")]
+    BGE["BAAI/bge-large-en-v1.5\nsentence-transformers, local, 1024-dim"]
+    FS[("PNG archive on disk\nsource_folder")]
+  end
+
+  subgraph entry["Entry point"]
+    APPPY["app/app.py\nst.set_page_config + st.navigation"]
+  end
+  MENU["src/menu.py\nPAGES registry + render_home()"]
+  APPPY --> MENU
+
+  subgraph pages["src/pages/ — Streamlit pages"]
+    REBUILD["rebuild_index.py\n(Build page)"]
+    SEARCHPG["search.py\n(Search page)"]
+    SAMPLESPG["curated_samples.py\n(Samples page)"]
+  end
+  APPPY --> REBUILD
+  APPPY --> SEARCHPG
+  APPPY --> SAMPLESPG
+
+  subgraph lib["src/ — non-UI logic"]
+    NOTIONCLIENT["notion_client.py\nload_config + Notion pull/field extraction"]
+    ENRICH["enrichment.py\nmetaphor enrichment via hub (lib + CLI)"]
+    BUILDIDX["build_index.py\njoin -> enrich -> compose -> embed -> persist (lib + CLI)"]
+    SAMPLES["sample_illustrations.py\nplan/apply samples folder (lib + CLI)"]
+    UIUTILS["ui_utils.py\nStreamlitLogHandler + open_in_explorer"]
+  end
+
+  REBUILD --> BUILDIDX
+  REBUILD --> UIUTILS
+  SAMPLESPG --> SAMPLES
+  SAMPLESPG --> NOTIONCLIENT
+  SAMPLESPG --> UIUTILS
+  SEARCHPG --> NOTIONCLIENT
+
+  BUILDIDX --> NOTIONCLIENT
+  BUILDIDX --> ENRICH
+  BUILDIDX --> BGE
+  NOTIONCLIENT --> NOTION
+  ENRICH --> HUB
+  SAMPLES --> FS
+
+  subgraph index["index/ — persisted artifacts"]
+    ENRICHCACHE["enrichments.jsonl\nappend-only cache, keyed by illustration_id"]
+    PARQUET["illustrations.parquet\nrow metadata + enriched columns"]
+    NPY["embeddings.npy\nfloat32 (N, 1024)"]
+    META["index_meta.json"]
+  end
+
+  ENRICH --> ENRICHCACHE
+  BUILDIDX --> PARQUET
+  BUILDIDX --> NPY
+  BUILDIDX --> META
+  SEARCHPG -->|load at query time| PARQUET
+  SEARCHPG -->|load at query time| NPY
+  SEARCHPG -->|dot product ranking| BGE
+
+  SAMPLES -->|reads| FS
+  SAMPLES -->|writes| SAMPLESOUT["inspiration samples/\nflat + nested PNGs + samples_index.xlsx"]
+
+  subgraph tests["tests/ — pytest suite"]
+    TESTS["test_build_index · test_enrichment ·\ntest_sample_illustrations · test_ui_utils"]
+  end
+  TESTS --> BUILDIDX
+  TESTS --> ENRICH
+  TESTS --> SAMPLES
+  TESTS --> UIUTILS
