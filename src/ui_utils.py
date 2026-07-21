@@ -74,7 +74,10 @@ def detach_log_handler(handler: StreamlitLogHandler, logger_name: Optional[str] 
 def open_in_explorer(path: Path) -> None:
     """Open the given directory/file in the OS file explorer."""
     if sys.platform.startswith("win"):
-        subprocess.Popen(["explorer", str(path)])
+        subprocess.Popen(
+            ["explorer", str(path)],
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+        )
     elif sys.platform == "darwin":
         subprocess.Popen(["open", str(path)])
     else:
