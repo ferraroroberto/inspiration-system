@@ -8,3 +8,5 @@ tmp/
 config.json
 .claude/settings.local.json
 .pytest_cache/
+# Launcher scratch (ephemeral images/logs written by the tray launcher)
+.launcher-tmp/
